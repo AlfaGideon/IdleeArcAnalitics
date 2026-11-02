@@ -1,0 +1,52 @@
+name: Build OTA channel
+
+# Регенерирует ota/update.json при изменении исходного документа канала.
+# Сам update.json в paths не указан — поэтому публикация из расширения
+# (или коммит этого файла) не запускает повторный цикл.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ota/source.json'
+      - 'ota-core.js'
+      - 'ota-config.js'
+      - 'tools/**'
+      - '.github/workflows/ota.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Self-test
+        run: |
+          node tools/test-ota.mjs
+          node tools/test-updater.mjs
+
+      - name: Build signed update.json
+        env:
+          OTA_PRIVATE_KEY: ${{ secrets.OTA_PRIVATE_KEY }}
+        run: node tools/build-ota.mjs --now
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add ota/update.json
+          if git diff --cached --quiet; then
+            echo "update.json не изменился"
+          else
+            git commit -m "OTA: пересобран update.json [skip ci]"
+            git push origin HEAD:main
+          fi

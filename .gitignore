@@ -1,0 +1,14 @@
+# Приватный ключ подписи канала — НИКОГДА не коммитить
+ota/private.pem
+*.pem
+
+# Сборки и зависимости
+node_modules/
+dist/
+build/
+
+# Мусор ОС
+.DS_Store
+__MACOSX/
+_metadata/
+Thumbs.db

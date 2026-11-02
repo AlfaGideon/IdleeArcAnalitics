@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "app": "IdleArc Analyst",
+  "channel": "stable",
+  "version": "1.1.0",
+  "publishedAt": "2026-11-02T12:00:00Z",
+  "minExtension": "1.1.0",
+  "notes": "Первый документ канала. Незаданные настройки берутся из встроенных значений расширения — так новый дефолт в будущей сборке не затрётся старым файлом.",
+  "changelog": [
+    "Добавлен центр обновлений OTA: проверка канала, быстрые правки, редактор JSON, публикация в GitHub.",
+    "Настройки перехвата, подписи метрик и CSS оверлея теперь меняются без переустановки расширения.",
+    "Проверка SHA-256 и опциональная подпись ECDSA P-256, откат и ручной импорт файла канала."
+  ],
+  "announcement": {
+    "level": "info",
+    "text": "IdleArc Analyst обновляется по воздуху: правки применяются сразу, переустанавливать расширение не нужно."
+  },
+  "settings": {
+    "background": {
+      "snapshotMinGapSec": 60
+    },
+    "capture": {
+      "limitPerMinute": 400
+    },
+    "overlay": {
+      "title": "IdleArc Analyst"
+    }
+  },
+  "patch": {
+    "metrics": {
+      "attack_damage_avg": {
+        "label": "Урон (средний)"
+      },
+      "dps": {
+        "label": "DPS"
+      }
+    }
+  },
+  "integrity": {
+    "sha256": "425090eb2379dcedc5431f83739342dbac07eea769a3594927c1120f4a6576ef",
+    "signature": null,
+    "keyId": "main"
+  }
+}

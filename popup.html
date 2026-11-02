@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>IdleArc Analyst</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="hdr">
+  <div class="logo"><img src="icon48.png" alt="" width="22" height="22" style="border-radius:5px"></div>
+  <div>
+    <h1>IdleArc Analyst <span class="ver" id="ver"></span></h1>
+    <div class="tiny muted" id="statusLine">ожидание данных…</div>
+  </div>
+  <div class="spacer"></div>
+  <button class="ota-pill" id="otaBtn" title="Центр обновлений (OTA)">OTA <span id="otaPillDot"></span></button>
+  <div class="dot" id="dot" title="Статус перехвата"></div>
+  <button class="sw" id="toggle" title="Включить/выключить сбор"></button>
+</header>
+
+<div class="ota-banner" id="otaBanner" hidden>
+  <span id="otaBannerText"></span>
+  <button class="btn sm gh" id="otaBannerBtn">Открыть</button>
+</div>
+
+<nav class="tabs">
+  <button class="tab act" data-tab="overview">Обзор</button>
+  <button class="tab" data-tab="formulas">Формулы</button>
+  <button class="tab" data-tab="calc">Калькулятор</button>
+  <button class="tab" data-tab="ref">Справочник</button>
+  <button class="tab" data-tab="data">Данные</button>
+</nav>
+
+<!-- ============ ОБЗОР ============ -->
+<section class="pane act" id="pane-overview">
+  <div id="ovEmpty" class="empty" hidden>
+    <div class="ico">◔</div>
+    <p><b>Пока нет наблюдений.</b><br>
+      Открой <a href="https://idlearc.com/app/" target="_blank">idlearc.com/app</a> — расширение само
+      подхватит характеристики из ответов игры. Затем в игре что-нибудь улучши (надень предмет,
+      подними уровень, вложи очко в навык) — появится второй снимок, и станет видна разница.</p>
+  </div>
+  <div id="ovBody" hidden>
+    <div class="card">
+      <h3>Текущие характеристики <span class="spacer"></span><span class="tiny muted" id="ovTime"></span></h3>
+      <div class="grid3" id="ovTiles"></div>
+      <div class="hint" id="ovDeltaHint"></div>
+    </div>
+    <div class="card">
+      <h3>Динамика <span class="spacer"></span><span class="tiny muted" id="ovSparkLab"></span></h3>
+      <svg class="spark" id="ovSpark" viewBox="0 0 320 70" preserveAspectRatio="none"></svg>
+      <div class="chips" id="ovChips" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <h3>Сбор данных</h3>
+      <div class="grid3">
+        <div class="stat"><div class="lab">Снимков</div><div class="val" id="stSnaps">0</div></div>
+        <div class="stat"><div class="lab">Перехватов</div><div class="val" id="stCaps">0</div></div>
+        <div class="stat"><div class="lab">Конфиг игры</div><div class="val" id="stConf">—</div></div>
+      </div>
+      <div class="hint">Снимок создаётся автоматически, когда меняются характеристики (не чаще раза в минуту).
+        Можно добавить вручную на вкладке «Данные».</div>
+    </div>
+    <div class="card" id="otaCard">
+      <h3>Обновления по воздуху <span class="spacer"></span>
+        <button class="btn sm gh" id="otaCheck">Проверить</button></h3>
+      <div class="kv"><span>Установлено</span><span id="otaInstalled">—</span></div>
+      <div class="kv"><span>Правки канала</span><span id="otaApplied">—</span></div>
+      <div class="kv"><span>Источник</span><span id="otaSource">—</span></div>
+      <div class="kv"><span>Проверка</span><span id="otaLast">—</span></div>
+      <div class="hint">Правки применяются сразу, без переустановки расширения. Редактировать и публиковать
+        их можно в центре обновлений.</div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn sm pri" id="otaOpenFromCard">Центр обновлений</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ФОРМУЛЫ ============ -->
+<section class="pane" id="pane-formulas">
+  <div class="card">
+    <h3>Что исследуем</h3>
+    <div class="grid2">
+      <div class="field"><label>Зависимая величина (y)</label><select id="fMetric"></select></div>
+      <div class="field"><label>Ось X</label><select id="fAxis"></select></div>
+    </div>
+    <div class="hint" id="fHint">Нужно ≥3 разных точек по оси X. X — это то, что менялось между снимками
+      (например, уровень персонажа или индекс шага).</div>
+  </div>
+  <div id="fResults"></div>
+  <div class="card" id="fPredictCard" hidden>
+    <h3>Прогноз</h3>
+    <div class="row">
+      <input id="fPredictX" type="number" step="any" placeholder="значение X">
+      <span class="muted">→</span>
+      <div class="formula" style="flex:1;text-align:center" id="fPredictOut">—</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ КАЛЬКУЛЯТОР ============ -->
+<section class="pane" id="pane-calc">
+  <div class="card">
+    <h3>Урон за удар</h3>
+    <div class="grid2">
+      <div class="field"><label>Урон (средний)</label><input id="cAvg" type="text" inputmode="decimal" placeholder="напр. 1234"></div>
+      <div class="field"><label>Шанс крита, %</label><input id="cCrit" type="text" inputmode="decimal" placeholder="0"></div>
+      <div class="field"><label>Урон крита, %</label><input id="cCritDmg" type="text" inputmode="decimal" placeholder="0"></div>
+      <div class="field"><label>Двойной урон, %</label><input id="cDD" type="text" inputmode="decimal" placeholder="0"></div>
+      <div class="field"><label>Двойной удар, %</label><input id="cDH" type="text" inputmode="decimal" placeholder="0"></div>
+      <div class="field"><label>Атак в секунду</label><input id="cAS" type="text" inputmode="decimal" placeholder="1"></div>
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:2px">
+      <button class="btn sm gh" id="cFill">Взять из последнего снимка</button>
+    </div>
+    <div class="sep"></div>
+    <div class="grid3">
+      <div class="stat"><div class="lab">Ожидаемый удар</div><div class="val" id="cOutHit">—</div></div>
+      <div class="stat"><div class="lab">Множитель</div><div class="val" id="cOutMult">—</div></div>
+      <div class="stat"><div class="lab">DPS</div><div class="val" id="cOutDps">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Что выгоднее качать <span class="spacer"></span><span class="tiny muted">+2% к параметру</span></h3>
+    <table id="cMargs">
+      <thead><tr><th>Параметр</th><th>Прирост урона</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="hint">Сравнение при равном приросте параметра. Если цена прокачки разная — дели прирост на цену.</div>
+  </div>
+
+  <div class="card">
+    <h3>Стоимость прокачки</h3>
+    <div class="grid3">
+      <div class="field"><label>Цена базового уровня</label><input id="uBase" type="text" inputmode="decimal" placeholder="200"></div>
+      <div class="field"><label>Рост за уровень</label><input id="uGrowth" type="text" inputmode="decimal" value="15"></div>
+      <div class="field"><label>Уровней</label><input id="uCount" type="text" inputmode="decimal" value="5"></div>
+    </div>
+    <div class="hint">Рост в процентах (15 = каждый следующий уровень дороже на 15%).
+      Точное значение можно вычислить по двум ценам из игры:</div>
+    <div class="row" style="margin-top:6px">
+      <input id="uC1" type="text" inputmode="decimal" placeholder="цена сейчас">
+      <input id="uC2" type="text" inputmode="decimal" placeholder="цена следующего">
+      <input id="uStep" type="text" inputmode="decimal" placeholder="шаг" value="1" style="max-width:64px">
+      <button class="btn sm" id="uSolve">Определить</button>
+    </div>
+    <div class="sep"></div>
+    <table id="uTable"><thead><tr><th>Уровень</th><th>Цена</th><th>Всего</th></tr></thead><tbody></tbody></table>
+  </div>
+</section>
+
+<!-- ============ СПРАВОЧНИК ============ -->
+<section class="pane" id="pane-ref">
+  <div class="card">
+    <h3>Конфиг игры <span class="spacer"></span>
+      <button class="btn sm gh" id="rRefresh">Обновить</button>
+    </h3>
+    <div class="tiny muted" id="rMeta">не загружен</div>
+  </div>
+  <div id="rBody"></div>
+</section>
+
+<!-- ============ ДАННЫЕ ============ -->
+<section class="pane" id="pane-data">
+  <div class="card">
+    <h3>Ручное наблюдение</h3>
+    <div class="grid2" id="mFields"></div>
+    <div class="row" style="margin-top:8px">
+      <select id="mMetric" style="max-width:150px"></select>
+      <button class="btn sm gh" id="mAddField">Добавить поле</button>
+      <div class="spacer" style="flex:1"></div>
+      <button class="btn pri" id="mSave">Сохранить снимок</button>
+    </div>
+    <div class="hint">Добавляй снимки до и после изменения в игре — так набираются точки для формул.</div>
+  </div>
+
+  <div class="card">
+    <h3>Снимки <span class="spacer"></span>
+      <button class="btn sm gh" id="dExport">Экспорт</button>
+      <button class="btn sm gh" id="dImport">Импорт</button>
+      <button class="btn sm gh" id="dClear">Очистить</button>
+    </h3>
+    <div class="list" id="dList"></div>
+    <input type="file" id="dFile" accept="application/json" hidden>
+  </div>
+
+  <div class="card">
+    <h3>Последние перехваты</h3>
+    <div id="dRaw"></div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+<script src="stats.js"></script>
+<script src="popup.js"></script>
+</body>
+</html>

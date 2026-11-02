@@ -1,0 +1,71 @@
+{
+  "manifest_version": 3,
+  "name": "IdleArc Analyst",
+  "version": "1.1.0",
+  "description": "Анализ характеристик и подбор формул прокачки для IdleArc: перехват статов, регрессия, калькулятор урона. OTA-обновления без переустановки.",
+  "icons": {
+    "16": "icon16.png",
+    "32": "icon32.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "permissions": [
+    "storage",
+    "scripting",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://idlearc.com/*",
+    "https://staging.idlearc.com/*",
+    "https://raw.githubusercontent.com/*",
+    "https://gist.githubusercontent.com/*",
+    "https://*.github.io/*",
+    "https://api.github.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "IdleArc Analyst",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "32": "icon32.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://idlearc.com/*",
+        "https://staging.idlearc.com/*"
+      ],
+      "js": [
+        "stats.js",
+        "content.js",
+        "overlay.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "inject.js"
+      ],
+      "matches": [
+        "https://idlearc.com/*",
+        "https://staging.idlearc.com/*"
+      ]
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

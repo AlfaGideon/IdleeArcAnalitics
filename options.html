@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>IdleArc Analyst — настройки и методика</title>
+<style>
+  :root{--bg:#0e1017;--bg2:#151824;--bg3:#1c2030;--line:#272c3d;--tx:#e8eaf2;--tx2:#98a0b8;--tx3:#626a82;--acc:#7c5cff;--acc2:#a78bfa;--ok:#34d399}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{overflow-x:hidden;background:var(--bg);color:var(--tx);font:14px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:36px 20px 80px}
+  .wrap{max-width:820px;margin:0 auto}
+  .head{display:flex;align-items:center;gap:14px;margin-bottom:26px}
+  .logo{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;font-size:22px;background:linear-gradient(135deg,#7c5cff,#4c2fd6);box-shadow:0 6px 22px #7c5cff40}
+  h1{font-size:21px;font-weight:700;letter-spacing:.2px}
+  .sub{color:var(--tx2);font-size:13px}
+  h2{font-size:15px;margin:30px 0 10px;font-weight:650;display:flex;align-items:center;gap:8px}
+  h2::before{content:"";width:3px;height:15px;border-radius:2px;background:var(--acc)}
+  p{color:var(--tx2);margin-bottom:10px}
+  ul,ol{margin:0 0 12px 20px;color:var(--tx2)}
+  li{margin-bottom:6px}
+  code{overflow-wrap:anywhere;word-break:break-word;background:#0b0d13;border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12.5px;color:#c9d1e8}
+  .box{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+  .row{display:flex;align-items:center;gap:10px;justify-content:space-between}
+  .sw{position:relative;width:44px;height:24px;border-radius:99px;background:#2b3145;transition:.18s;flex:none;cursor:pointer;border:0}
+  .sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#8b93ab;transition:.18s}
+  .sw.on{background:var(--acc)} .sw.on::after{left:23px;background:#fff}
+  table{table-layout:fixed;width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px}
+  th{text-align:left;color:var(--tx3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:7px 8px;border-bottom:1px solid var(--line)}
+  td{padding:7px 8px;overflow-wrap:anywhere;border-bottom:1px solid #ffffff08;color:var(--tx2)}
+  td:first-child{color:var(--tx)}
+  .ok{color:var(--ok)}
+  .note{background:#7c5cff14;border:1px solid #7c5cff40;border-radius:10px;padding:12px 14px;font-size:13px;color:#cfc4ff;margin-bottom:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <div class="logo"><img src="icon48.png" alt="" width="30" height="30" style="border-radius:8px"></div>
+    <div>
+      <h1>IdleArc Analyst</h1>
+      <div class="sub">Настройки и методика анализа · <span id="optVer">v1.1.0</span></div>
+    </div>
+  </div>
+
+  <div class="box row">
+    <div>
+      <div style="font-weight:600">Сбор данных включён</div>
+      <div class="sub">Выключи, если хочешь полностью остановить перехват.</div>
+    </div>
+    <button class="sw on" id="toggle"></button>
+  </div>
+
+  <h2>Обновления по воздуху (OTA)</h2>
+  <div class="box row">
+    <div>
+      <div style="font-weight:600">Центр обновлений</div>
+      <div class="sub">Проверять канал, менять настройки, редактировать и публиковать правки —
+        без переустановки расширения и без перезагрузки страницы игры.</div>
+      <div class="sub" id="otaState" style="margin-top:6px">состояние загружается…</div>
+    </div>
+    <button class="btn" id="openOta" style="flex:none">Открыть</button>
+  </div>
+  <p>Расширение раз в час читает <code>update.json</code> из репозитория, проверяет SHA-256
+     (и, если настроено, подпись ECDSA) и применяет правки: лимиты перехвата, регулярки,
+     подписи метрик, CSS оверлея, объявления и — из подписанного канала — новый код перехватчика.
+     Всё это можно поменять прямо из расширения, в том числе опубликовав файл на GitHub через API.
+     Подробности — в <code>README.md</code>.</p>
+
+  <div class="note">
+    Расширение <b>только читает</b> данные, которые игра и так получает от сервера, и считает статистику.
+    Оно не нажимает кнопки, не отправляет запросы от твоего имени и не меняет сохранение.
+  </div>
+
+  <h2>Как расширение получает данные</h2>
+  <p>IdleArc — это Flutter-приложение: интерфейс нарисован на <code>&lt;canvas&gt;</code>, поэтому «выделить
+     текст» и прочитать HTML нельзя. Зато игра общается с сервером по HTTP:</p>
+  <ol>
+    <li>Контент-скрипт внедряет крошечный перехватчик в контекст страницы <b>до</b> загрузки игры.</li>
+    <li>Перехватчик оборачивает <code>fetch</code>, <code>XMLHttpRequest</code> и <code>WebSocket</code>, копируя
+        только JSON-ответы <code>idlearc.com/api/*</code>, в которых встречаются характеристики.</li>
+    <li>Из ответов вытаскиваются числа (<code>attackDamage</code>, <code>maxHealth</code>, <code>combatStats</code>…)
+        и превращаются в «снимок» — набор характеристик на момент времени.</li>
+    <li>Снимки складываются в <code>chrome.storage.local</code>. Когда характеристика меняется — появляется новая точка.</li>
+  </ol>
+
+  <h2>Откуда берутся «базовые параметры»</h2>
+  <p>Чисел, которые игра не показывает, два вида, и у них разные источники:</p>
+  <table>
+    <thead><tr><th>Что ищем</th><th>Откуда берём</th></tr></thead>
+    <tbody>
+      <tr><td>Коэффициенты статов, стоимость апгрейдов, таблицы монстров</td>
+        <td>Публичный конфиг <code>https://idlearc.com/api/config/game</code> — отдаётся без входа в аккаунт, ~640 КБ. Расширение качает его и показывает во вкладке «Справочник».</td></tr>
+      <tr><td>Как твои статы растут с уровнем/предметами</td>
+        <td>Подбор по твоим же наблюдениям: метод наименьших квадратов сравнивает линейную, квадратичную, степенную и экспоненциальную модели и выбирает лучшую по AICc.</td></tr>
+      <tr><td>Стоимость следующей прокачки</td>
+        <td>Две цены из игры дают точный шаг геометрической прогрессии: <code>g = (c₂/c₁)^(1/n) − 1</code>.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Как правильно собирать точки</h2>
+  <ul>
+    <li>Сделай снимок → измени <b>ровно один</b> параметр в игре (вложи очко, надень предмет) → дождись нового снимка.</li>
+    <li>Меняй один параметр за раз — иначе не понять, что повлияло на результат.</li>
+    <li>Для надёжной формулы нужно <b>минимум 3</b> разные точки, лучше 5–8.</li>
+    <li>Если ось X — «индекс шага», формула описывает чистый прирост шага. Если ось X — «уровень персонажа»,
+        получишь зависимость «стат от уровня».</li>
+  </ul>
+
+  <h2>Как читать результат</h2>
+  <table>
+    <thead><tr><th>R²</th><th>Значение</th></tr></thead>
+    <tbody>
+      <tr><td>≥ 0.999</td><td class="ok">Модель совпадает с игрой (возможно, это и есть настоящая формула)</td></tr>
+      <tr><td>0.99–0.999</td><td>Очень близко; часто округление в интерфейсе</td></tr>
+      <tr><td>0.95–0.99</td><td>Хорошее приближение для прогноза</td></tr>
+      <tr><td>&lt; 0.95</td><td>Формула сложнее выбранной модели — добавь точек или другой оси</td></tr>
+    </tbody>
+  </table>
+  <p>Модели сравниваются по AICc: если несколько подходят одинаково, расширение предпочитает более простую.</p>
+
+  <h2>Файлы данных</h2>
+  <p>Экспорт/импорт — JSON с массивом снимков. Удобно перенести историю на другой компьютер
+     или поделиться с другими игроками.</p>
+
+  <h2>Ограничения</h2>
+  <ul>
+    <li>Расширение видит только те числа, которые сервер реально присылает. Если игра считает что-то на клиенте
+        «на лету» и не показывает, этого числа не будет.</li>
+    <li>Формула урона в IdleArc многоступенчатая (база → аддитивные % → плоские добавки → отдельные множители).
+        Калькулятор считает ожидаемый удар с критами и двойными ударами, но не моделирует все слои сразу —
+        для полной картины нужны эксперименты по слоям.</li>
+    <li>Обновления игры меняют конфиг. Кнопка «Обновить» в Справочнике перекачивает его заново.</li>
+  </ul>
+</div>
+<script src="options.js"></script>
+</body>
+</html>

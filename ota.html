@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>IdleArc Analyst — центр обновлений</title>
+<link rel="stylesheet" href="ota.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="head">
+    <div class="logo"><img src="icon48.png" alt="" width="30" height="30"></div>
+    <div class="head-txt">
+      <h1>Центр обновлений <span class="tag">OTA</span></h1>
+      <div class="sub">Правки применяются «по воздуху» — без переустановки расширения</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn gh" id="btnReload">Перезагрузить игру</button>
+    <button class="btn pri" id="btnCheck">Проверить сейчас</button>
+  </header>
+
+  <div class="status-grid">
+    <div class="stat"><div class="lab">Расширение</div><div class="val" id="sInstalled">—</div></div>
+    <div class="stat"><div class="lab">Правки канала</div><div class="val" id="sApplied">—</div></div>
+    <div class="stat"><div class="lab">Источник</div><div class="val" id="sSource">—</div></div>
+    <div class="stat"><div class="lab">Подпись</div><div class="val" id="sSignature">—</div></div>
+    <div class="stat"><div class="lab">Последняя проверка</div><div class="val" id="sCheck">—</div></div>
+    <div class="stat"><div class="lab">Успешная загрузка</div><div class="val" id="sOk">—</div></div>
+  </div>
+
+  <div class="note" id="statusNote">Загрузка состояния…</div>
+  <div class="note bad" id="errorNote" hidden></div>
+
+  <div class="note upd" id="updateNote" hidden>
+    <div class="row">
+      <div><b>Доступно обновление <span id="updVer"></span></b>
+        <div class="tiny" id="updChangelog"></div></div>
+      <button class="btn sm pri" id="btnApply">Применить</button>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab act" data-tab="quick">Быстрые правки</button>
+    <button class="tab" data-tab="editor">Редактор JSON</button>
+    <button class="tab" data-tab="channel">Канал</button>
+    <button class="tab" data-tab="publish">Публикация</button>
+    <button class="tab" data-tab="log">Журнал</button>
+  </nav>
+
+  <!-- ================= БЫСТРЫЕ ПРАВКИ ================= -->
+  <section class="pane act" id="pane-quick">
+    <div class="card">
+      <h3>Что можно поменять прямо здесь</h3>
+      <p class="muted">Изменения сохраняются как <b>локальная правка</b>: она применяется поверх канала
+        мгновенно, без публикации и без перезагрузки страницы игры. Чтобы разослать её на все устройства —
+        открой «Редактор JSON» и опубликуй документ.</p>
+      <div class="grid2">
+        <div class="field"><label>Заголовок оверлея</label><input id="qTitle" type="text" placeholder="IdleArc Analyst"></div>
+        <div class="field"><label>Интервал автоснимков, сек</label><input id="qGap" type="number" min="0" max="3600" step="1"></div>
+        <div class="field"><label>Лимит перехватов в минуту</label><input id="qLimit" type="number" min="10" max="5000" step="10"></div>
+        <div class="field"><label>TTL конфига игры, часы</label><input id="qTtl" type="number" min="0.1" max="168" step="0.5"></div>
+        <div class="field"><label>Доп. пути API (через запятую)</label><input id="qPaths" type="text" placeholder="/combat, /hero"></div>
+        <div class="field"><label>Обновление оверлея, мс</label><input id="qRefresh" type="number" min="1000" max="120000" step="500"></div>
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>Регулярка «интересных» ответов (regex, без флагов)</label>
+        <input id="qRegex" type="text" placeholder="combatStats|attackDamage|dps">
+      </div>
+      <div class="field" style="margin-top:10px">
+        <label>Сообщение игрокам (объявление, пусто = убрать)</label>
+        <input id="qAnnounce" type="text" placeholder="Например: формула урона уточнена">
+      </div>
+      <div class="row checks">
+        <label class="check"><input type="checkbox" id="qFab"> Показывать кнопку оверлея</label>
+        <label class="check"><input type="checkbox" id="qPause"> Пауза перехвата</label>
+        <label class="check"><input type="checkbox" id="qAll"> Слушать все ответы API</label>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn pri" id="btnQuickApply">Применить локально</button>
+        <button class="btn gh" id="btnQuickFill">Заполнить из текущих</button>
+        <button class="btn gh" id="btnQuickReset">Сбросить локальные правки</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Управление применённым</h3>
+      <div class="row">
+        <button class="btn gh" id="btnRollback">Откатить последнее обновление</button>
+        <button class="btn gh" id="btnFactory">Сбросить всё к заводским</button>
+        <button class="btn gh" id="btnImportFile">Импорт update.json с устройства</button>
+        <button class="btn gh" id="btnBundled">Встроенный канал (офлайн)</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+      <p class="muted" style="margin-top:10px">Импорт нужен на Android и в сетях, где GitHub недоступен:
+        положи файл канала в папку с расширением или выбери его здесь — правки применятся без интернета.</p>
+    </div>
+
+    <details class="card">
+      <summary>Текущая эффективная конфигурация</summary>
+      <pre id="effectiveJson">—</pre>
+    </details>
+  </section>
+
+  <!-- ================= РЕДАКТОР JSON ================= -->
+  <section class="pane" id="pane-editor">
+    <div class="card">
+      <h3>Документ канала / локальная правка</h3>
+      <p class="muted">Это обычный <code>update.json</code>. Поля <code>settings</code> меняют поведение,
+        <code>patch</code> — подписи, синонимы, CSS и (при подписи) код перехватчика.
+        Незаданные поля не перезаписывают канал.</p>
+      <textarea id="docJson" spellcheck="false" rows="20"></textarea>
+      <div class="row wrap" style="margin-top:10px">
+        <button class="btn gh sm" id="btnTemplate">Шаблон</button>
+        <button class="btn gh sm" id="btnFromChannel">Из применённого канала</button>
+        <button class="btn gh sm" id="btnFormat">Форматировать</button>
+        <button class="btn gh sm" id="btnValidate">Проверить</button>
+        <button class="btn gh sm" id="btnEditorFile">Загрузить файл…</button>
+        <input type="file" id="editorFile" accept="application/json,.json" hidden>
+      </div>
+      <div class="sep"></div>
+      <div class="row wrap">
+        <button class="btn pri" id="btnLocal">Применить локально</button>
+        <button class="btn" id="btnManual">Применить как канал (вручную)</button>
+        <button class="btn gh" id="btnDownload">Скачать update.json</button>
+        <button class="btn gh" id="btnCopy">Скопировать JSON</button>
+        <button class="btn" id="btnPublishFromEditor">Опубликовать на GitHub</button>
+      </div>
+      <pre id="editorResult" class="result">—</pre>
+    </div>
+
+    <div class="card">
+      <h3>Шпаргалка по полям</h3>
+      <pre class="help">{
+  "version": "1.1.1",                 // обязательно, x.y.z
+  "changelog": ["что изменилось"],
+  "announcement": {"level":"info","text":"сообщение"},
+  "settings": {
+    "background": {"snapshotMinGapSec":60, "configTtlHours":6},
+    "capture": {"limitPerMinute":400, "relevantPattern":"...", "extraApiPaths":[]},
+    "overlay": {"title":"...", "showFab":true}
+  },
+  "patch": {
+    "metrics": {"strength": {"label":"Сила (новая)"}},
+    "synonyms": {"newapikeyname":"strength"},
+    "overlayCss": ".ia-fab{border-radius:50%}",
+    "features": {"pause_capture":false, "sample_all":false},
+    "hookCode": null                  // только из подписанного канала!
+  }
+}</pre>
+    </div>
+  </section>
+
+  <!-- ================= КАНАЛ ================= -->
+  <section class="pane" id="pane-channel">
+    <div class="card">
+      <h3>Откуда качать правки</h3>
+      <div class="field"><label>Основной URL (только HTTPS)</label><input id="cUrl" type="url" spellcheck="false"></div>
+      <div class="field" style="margin-top:10px"><label>Зеркало / резервный URL</label><input id="cBackup" type="url" spellcheck="false"></div>
+      <div class="grid2" style="margin-top:10px">
+        <div class="field"><label>Интервал автопроверки, минут</label><input id="cInterval" type="number" min="5" max="10080" step="5"></div>
+        <div class="field"><label>Публичный ключ (SPKI, base64)</label><input id="cPubKey" type="text" spellcheck="false" placeholder="не задан"></div>
+      </div>
+      <div class="row checks" style="margin-top:10px">
+        <label class="check"><input type="checkbox" id="cAuto"> Проверять автоматически</label>
+        <label class="check"><input type="checkbox" id="cAutoApply"> Применять сразу</label>
+        <label class="check"><input type="checkbox" id="cRequireSig"> Только подписанные документы</label>
+        <label class="check"><input type="checkbox" id="cAllowCode"> Разрешить неподписанный hookCode</label>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn pri" id="btnSavePrefs">Сохранить настройки</button>
+        <button class="btn gh" id="btnDefaultUrl">URL по умолчанию</button>
+        <button class="btn gh" id="btnCheck2">Проверить канал</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Где разместить файл</h3>
+      <ol class="muted">
+        <li><b>Проще всего:</b> этот репозиторий — файл <code>ota/update.json</code>, URL
+          <code id="defaultUrlText"></code>. Публикуй прямо из расширения на вкладке «Публикация».</li>
+        <li><b>GitHub Pages / gist / свой сервер:</b> положи <code>update.json</code> и вставь прямую HTTPS-ссылку.
+          Хост должен отдавать <code>Access-Control-Allow-Origin: *</code>.</li>
+        <li><b>Без интернета:</b> «Скачать update.json» → перенести на устройство → «Импорт с устройства».</li>
+      </ol>
+      <p class="muted">raw.githubusercontent.com кеширует ответы примерно на 5 минут — кнопка
+        «Проверить сейчас» добавляет к URL случайный параметр и получает свежую версию.</p>
+      <p class="warn-text">Произвольный адрес потребует разрешение на доступ к сайту: браузер спросит
+        его при сохранении. На Android/Yandex такой запрос может быть недоступен — используй встроенные хосты
+        (GitHub, gist, github.io) или импорт файла.</p>
+    </div>
+  </section>
+
+  <!-- ================= ПУБЛИКАЦИЯ ================= -->
+  <section class="pane" id="pane-publish">
+    <div class="card">
+      <h3>Публикация прямо из расширения</h3>
+      <p class="muted">Расширение запишет <code>update.json</code> в репозиторий через GitHub API и сразу
+        подхватит его. Нужен personal access token с правом <code>Contents: read &amp; write</code>
+        только для этого репозитория (fine-grained token).</p>
+      <div class="grid2">
+        <div class="field"><label>Владелец</label><input id="pOwner" type="text"></div>
+        <div class="field"><label>Репозиторий</label><input id="pRepo" type="text"></div>
+        <div class="field"><label>Ветка</label><input id="pBranch" type="text"></div>
+        <div class="field"><label>Путь к файлу</label><input id="pPath" type="text"></div>
+      </div>
+      <div class="field" style="margin-top:10px"><label>Токен GitHub <span id="tokenState" class="tiny muted"></span></label>
+        <input id="pToken" type="password" placeholder="github_pat_…" autocomplete="off" spellcheck="false"></div>
+      <div class="field" style="margin-top:10px"><label>Приватный ключ ECDSA P-256 (PEM, необязательно)</label>
+        <textarea id="pKey" rows="4" spellcheck="false" placeholder="-----BEGIN PRIVATE KEY-----"></textarea></div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn pri" id="btnSavePublisher">Сохранить</button>
+        <button class="btn gh" id="btnTestPublisher">Проверить доступ</button>
+        <button class="btn gh" id="btnClearToken">Удалить секреты</button>
+      </div>
+      <p class="warn-text">Токен и приватный ключ хранятся только в <code>chrome.storage.local</code>
+        этого браузера, не попадают в журнал и не экспортируются. Не встраивайте ключ в публичную сборку
+        расширения — для командной работы используйте <code>tools/build-ota.mjs</code> и секрет GitHub Actions.</p>
+    </div>
+
+    <div class="card">
+      <h3>Подпись канала</h3>
+      <p class="muted"><code>node tools/keygen.mjs</code> создаёт пару ключей. Публичный ключ вставь в
+        поле «Публичный ключ» на вкладке «Канал» (или в <code>ota-config.js</code>), приватный — сюда.
+        Тогда документ подписывается при публикации, и расширение отвергнет любую подмену.</p>
+      <p class="muted">Без подписи канал тоже работает: проверяется SHA-256 канонического JSON,
+        а произвольный удалённый <code>hookCode</code> по умолчанию отключается политикой безопасности.</p>
+    </div>
+  </section>
+
+  <!-- ================= ЖУРНАЛ ================= -->
+  <section class="pane" id="pane-log">
+    <div class="card">
+      <h3>Журнал обновлений <span class="spacer"></span>
+        <button class="btn gh sm" id="btnRefreshLog">Обновить</button></h3>
+      <div id="logList" class="log"></div>
+    </div>
+    <div class="card">
+      <h3>История применённых версий</h3>
+      <div id="historyList" class="log"></div>
+    </div>
+  </section>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="ota-config.js"></script>
+<script src="ota-core.js"></script>
+<script src="ota.js"></script>
+</body>
+</html>
